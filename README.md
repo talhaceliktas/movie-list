@@ -21,7 +21,7 @@
 
 ## 🔗 Canlı Demo
 
-👉 [https://movie-list-alpha-orpin.vercel.app](https://mymovielist.vercel.app)
+👉 [https://movie-list-alpha-orpin.vercel.app](https://movie-list-alpha-orpin.vercel.app/)
 
 <br/>
 
