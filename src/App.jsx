@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import useMovies from "./services/useMovies";
 
@@ -8,6 +8,7 @@ import MoviesList from "./components/MoviesList";
 import SearchList from "./components/SearchList";
 import styled from "styled-components";
 import MovieDetails from "./components/MovieDetails";
+
 const StyledContainer = styled.div`
   color: white;
   display: flex;
@@ -16,7 +17,8 @@ const StyledContainer = styled.div`
   height: calc(100vh - 7.2rem - 3 * 2.5rem);
 `;
 
-const tempWatchedData = [
+// Sabit veri komponentin dışında tanımlandı
+const INITIAL_WATCHED_DATA = [
   {
     imdbID: "tt1375666",
     Title: "Inception",
@@ -40,38 +42,75 @@ const tempWatchedData = [
 ];
 
 function App() {
-  const [watchedMovies, setWatchedMovies] = useState(tempWatchedData);
+  const [watchedMovies, setWatchedMovies] = useState(INITIAL_WATCHED_DATA);
   const [searchText, setSearchText] = useState("");
-  const { movies, isLoading, error } = useMovies(searchText);
-  const foundedMovieLength = movies.length;
-
   const [selectedMovieImdbID, setSelectedMovieImdbID] = useState(null);
 
-  function deleteMovite(imdbId) {
+  const { movies, isLoading, error } = useMovies(searchText);
+
+  // Memoized değerler
+  const foundedMovieLength = useMemo(() => movies.length, [movies.length]);
+
+  const watchedMovieIds = useMemo(
+    () => new Set(watchedMovies.map((movie) => movie.imdbID)),
+    [watchedMovies]
+  );
+
+  // useCallback ile optimize edilmiş fonksiyonlar
+  const deleteMovie = useCallback((imdbId) => {
     toast.dismiss();
     toast.success("Movie deleted successfully!");
     setWatchedMovies((movies) =>
       movies.filter((movie) => movie.imdbID !== imdbId)
     );
-  }
+  }, []);
 
-  function rateMovie(rateScore, movieDetails) {
-    if (!rateScore || !movieDetails) return;
+  const rateMovie = useCallback(
+    (rateScore, movieDetails) => {
+      if (!rateScore || !movieDetails) {
+        toast.error("Invalid rating or movie details");
+        return;
+      }
 
-    const newMovie = {
-      imdbID: movieDetails.imdbID,
-      Title: movieDetails.Title,
-      Year: movieDetails.Year,
-      Poster: movieDetails.Poster,
-      runtime: +movieDetails.Runtime.split(" ")[0],
-      imdbRating: +movieDetails.imdbRating,
-      userRating: rateScore,
-    };
+      // Duplicate kontrol
+      if (watchedMovieIds.has(movieDetails.imdbID)) {
+        toast.error("This movie is already in your watched list!");
+        return;
+      }
 
-    toast.success("You add your movie successfully");
-    setWatchedMovies((movies) => [...movies, newMovie]);
+      const runtime = movieDetails.Runtime?.split(" ")[0];
+      const imdbRating = movieDetails.imdbRating;
+
+      // Veri validasyonu
+      if (!runtime || !imdbRating || imdbRating === "N/A") {
+        toast.error("Movie details are incomplete");
+        return;
+      }
+
+      const newMovie = {
+        imdbID: movieDetails.imdbID,
+        Title: movieDetails.Title,
+        Year: movieDetails.Year,
+        Poster: movieDetails.Poster,
+        runtime: +runtime,
+        imdbRating: +imdbRating,
+        userRating: rateScore,
+      };
+
+      toast.success("Movie added to your list successfully!");
+      setWatchedMovies((movies) => [...movies, newMovie]);
+      setSelectedMovieImdbID(null);
+    },
+    [watchedMovieIds]
+  );
+
+  const handleMovieSelect = useCallback((imdbID) => {
+    setSelectedMovieImdbID(imdbID);
+  }, []);
+
+  const handleBackToList = useCallback(() => {
     setSelectedMovieImdbID(null);
-  }
+  }, []);
 
   return (
     <>
@@ -86,22 +125,29 @@ function App() {
           movies={movies}
           isLoading={isLoading}
           error={error}
-          setSelectedMovieImdbID={setSelectedMovieImdbID}
+          setSelectedMovieImdbID={handleMovieSelect}
         />
         {selectedMovieImdbID ? (
           <MovieDetails
             selectedMovieImdbID={selectedMovieImdbID}
             rateMovie={rateMovie}
             watchedMovies={watchedMovies}
+            onBack={handleBackToList}
           />
         ) : (
-          <MoviesList
-            watchedMovies={watchedMovies}
-            deleteMovite={deleteMovite}
-          />
+          <MoviesList watchedMovies={watchedMovies} deleteMovie={deleteMovie} />
         )}
       </StyledContainer>
-      <Toaster position="bottom-center" />
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#363636",
+            color: "#fff",
+          },
+        }}
+      />
     </>
   );
 }
