@@ -21,7 +21,7 @@
 
 ## 🔗 Canlı Demo
 
-👉 [https://mymovielist.vercel.app](https://mymovielist.vercel.app)
+👉 [https://movie-list-alpha-orpin.vercel.app](https://movie-list-alpha-orpin.vercel.app/)
 
 <br/>
 
@@ -40,7 +40,7 @@
 Projeyi klonlayıp yerelde çalıştırmak için:
 
 ```bash
-git clone https://github.com/talhaceliktas/mymovielist.git
+git clone https://github.com/talhaceliktas/movie-list.git
 cd mymovielist
 npm install
 npm run dev
